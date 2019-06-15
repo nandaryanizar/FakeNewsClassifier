@@ -9,50 +9,32 @@ from sklearn import metrics
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.externals import joblib
-from app.machine_learning.data_preprocessor import DataPrerocessor
+from classifier.machine_learning.data_preprocessor import DataPrerocessor
 
 news_labels = {1: "Satire", 2: "Hoax", 3: "Propaganda", 4: "Trusted"}
-politifact_labels = {0: "True", 1: "Mostly True", 2: "Half True", 3: "Mostly False", 4: "False", 5: "Pants-on-fire"}
 
 class Classifier:
     classifier = None
-    app = None
-    model = None
+    model_path = None
+    tfidf_path = None
     tfidf_vect_ngram = None
 
-    def __init__(self, app, model, learning_rate=5e-5, max_iters=1000, add_intercept=True):
+    def __init__(self, model, model_path, tfidf_path, learning_rate=5e-5, max_iters=1000, add_intercept=True):
         try:
+            model_path += ".pkl"
+            tfidf_path += ".pkl"
             logging.info("Initializing classifier")
-            if not app:
-                raise Exception("App name must be specified")
             if not model:
                 raise Exception("Classifier model must be specified")
 
-            if model.lower() == "maxent":
-                if app.lower() == "newsreliability":
-                    if os.path.isfile("maxent-news.pkl"):
-                        self.classifier = joblib.load("maxent-news.pkl")
-                    if os.path.isfile("tfidf-maxent-news.pkl"):
-                        self.tfidf_vect_ngram = joblib.load("tfidf-maxent-news.pkl")
-                elif app.lower() == "predictingtruthfullness":
-                    if os.path.isfile("maxent-politifact.pkl"):
-                        self.classifier = joblib.load("maxent-politifact.pkl")
-                    if os.path.isfile("tfidf-maxent-politifact.pkl"):
-                        self.tfidf_vect_ngram = joblib.load("tfidf-maxent-politifact.pkl")
+            if model.lower() == "logistic_regression":
+                if os.path.isfile(self.model_path):
+                    self.classifier = joblib.load(self.model_path)
+                if os.path.isfile(self.tfidf_path):
+                    self.tfidf_vect_ngram = joblib.load(self.tfidf_path)
 
-                if not self.classifier:
-                    self.classifier = LogisticRegression(max_iter=max_iters, fit_intercept=add_intercept, multi_class="multinomial", solver="newton-cg")
-            elif model.lower() == "multinomialnb":
-                if os.path.isfile("mnb-politifact.pkl"):
-                    self.classifier = joblib.load("mnb-politifact.pkl")
-                if os.path.isfile("tfidf-maxent-politifact.pkl"):
-                    self.tfidf_vect_ngram = joblib.load("tfidf-maxent-politifact.pkl")
-
-                if not self.classifier:
-                    self.classifier = MultinomialNB()
-
-            self.app = app
-            self.model = model
+            if not self.classifier:
+                self.classifier = LogisticRegression(max_iter=max_iters, fit_intercept=add_intercept, multi_class="multinomial", solver="newton-cg")
 
             logging.info("Classifier created")
         except Exception as e:
@@ -61,10 +43,9 @@ class Classifier:
     def train(self):
         try:
             logging.info("initializing classifier training")
-            if self.app.lower() == "newsreliability":
-                logging.info("Loading training and test data")
-                train_data = pd.read_csv('newsfiles/fulltrain.csv', header=None)
-                test_data = pd.read_csv('newsfiles/balancedtest.csv', header=None)
+            logging.info("Loading training and test data")
+            train_data = pd.read_csv('newsfiles/fulltrain.csv', header=None)
+            test_data = pd.read_csv('newsfiles/balancedtest.csv', header=None)
 
             logging.info("Splitting training and test label and text")
             train_X = train_data[1]
@@ -83,17 +64,8 @@ class Classifier:
             result = metrics.accuracy_score(predictions, test_Y)
 
             logging.info("Saving classifier")
-            if self.classifier:
-                if self.model.lower() == "maxent":
-                    if self.app.lower() == "newsreliability":
-                        joblib.dump(self.classifier, "maxent-news.pkl")
-                        joblib.dump(self.tfidf_vect_ngram, "tfidf-maxent-news.pkl")
-                    elif self.app.lower() == "predictingtruthfullness":
-                        joblib.dump(self.classifier, "maxent-politifact.pkl")
-                        joblib.dump(self.tfidf_vect_ngram, "tfidf-maxent-politifact.pkl")
-                elif self.model.lower() == "multinomialnb":
-                    joblib.dump(self.classifier, "mnb-politifact.pkl")
-                    joblib.dump(self.tfidf_vect_ngram, "tfidf-mnb-politifact.pkl")
+            joblib.dump(self.classifier, self.model_path)
+            joblib.dump(self.tfidf_vect_ngram, self.tfidf_path)
 
             logging.info("Finish training classifier")
             return result
@@ -110,10 +82,7 @@ class Classifier:
 
             result = self.classifier.predict(test_X)
 
-            if self.app.lower() == "newsreliability":
-                return news_labels[result[0]]
-            elif self.app.lower() == "predictingtruthfullness":
-                return politifact_labels[result[0]]
+            return news_labels[result[0]]
         except Exception as e:
             logging.exception(str(e))
 
