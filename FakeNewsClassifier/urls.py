@@ -18,6 +18,7 @@ from django.urls import path, include
 # from rest_framework import routers
 
 import news.urls
+import classifier.urls
 
 # router = routers.DefaultRouter()
 # router.register(r'news', news_api.NewsList.as_view())
@@ -27,4 +28,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('oauth2/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     path('api/v1/', include(news.urls)),
+    path('api/v1/', include(classifier.urls)),
 ]
