@@ -8,6 +8,7 @@ logging.basicConfig(filename="process.log", level=logging.INFO)
 from sklearn import metrics
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 from classifier.machine_learning.data_preprocessor import DataPrerocessor
 
@@ -19,7 +20,7 @@ class Classifier:
     tfidf_path = None
     tfidf_vect_ngram = None
 
-    def __init__(self, model, model_path, tfidf_path, learning_rate=5e-5, max_iters=1000, add_intercept=True):
+    def __init__(self, model, model_path, tfidf_path, learning_rate=5e-5, max_iters=1000, estimators=1000, rnd_state=42, add_intercept=True):
         try:
             model_path += ".pkl"
             tfidf_path += ".pkl"
@@ -27,14 +28,17 @@ class Classifier:
             if not model:
                 raise Exception("Classifier model must be specified")
 
-            if model.lower() == "logistic_regression":
-                if os.path.isfile(self.model_path):
-                    self.classifier = joblib.load(self.model_path)
-                if os.path.isfile(self.tfidf_path):
-                    self.tfidf_vect_ngram = joblib.load(self.tfidf_path)
+        
+            if os.path.isfile(self.model_path):
+                self.classifier = joblib.load(self.model_path)
+            if os.path.isfile(self.tfidf_path):
+                self.tfidf_vect_ngram = joblib.load(self.tfidf_path)
 
             if not self.classifier:
-                self.classifier = LogisticRegression(max_iter=max_iters, fit_intercept=add_intercept, multi_class="multinomial", solver="newton-cg")
+                if model.lower() == "logistic_regression":
+                    self.classifier = LogisticRegression(max_iter=max_iters, fit_intercept=add_intercept, multi_class="multinomial", solver="newton-cg")
+                elif model.lower() == "random_forest":
+                    self.classifier = RandomForestClassifier(n_estimators=estimators, random_state=rnd_state)
 
             logging.info("Classifier created")
         except Exception as e:

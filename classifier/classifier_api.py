@@ -11,7 +11,8 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Classifier
 from news.models import News
 from news.news_api import NewsSerializer
-from classifier.deep_learning.lstm import LSTM
+
+from classifier.machine_learning import classifier
 
 # @csrf_exempt
 # def predict(request):
@@ -68,13 +69,11 @@ class ClassifierDetail(APIView):
             if news:
                 return Response(news, status=status.HTTP_200_OK)
             news_serializer.save()
-            train_Y = [request.data['content']]
-            train_X = train_Y.copy()
-            test_Y = [0]
-            test_X = test_Y.copy()
             
-            classifier = Classifier.objects.get(pk=1)
-            lstm = LSTM(train_X, train_Y, test_X, test_Y, classifier.model_path)
-            pred = lstm.predict()
+            # model = classifier.Classifier("random_forest","random_forest","tfidf_random_forest")
+            
+            clssfr = Classifier.objects.get(pk=1)
+            model = classifier.Classifier(clssfr.model,clssfr.model + "_model",clssfr.model + "_tfidf")
+            pred = model.predict(request.data['content'])
             return Response(pred, status=status.HTTP_201_CREATED)
         return Response(news_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
